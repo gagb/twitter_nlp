@@ -34,19 +34,25 @@ import pos_tagger_stdin
 import chunk_tagger_stdin
 import event_tagger_stdin
 
+
 def GetNer(ner_model, memory="256m"):
-    return subprocess.Popen('java -Xmx%s -cp %s/mallet-2.0.6/lib/mallet-deps.jar:%s/mallet-2.0.6/class cc.mallet.fst.SimpleTaggerStdin --weights sparse --model-file %s/models/ner/%s' % (memory, BASE_DIR, BASE_DIR, BASE_DIR, ner_model),
-                           shell=True,
-                           close_fds=True,
-                           stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE)
+    return subprocess.Popen(
+        'java -Xmx%s -cp %s/mallet-2.0.6/lib/mallet-deps.jar:%s/mallet-2.0.6/class cc.mallet.fst.SimpleTaggerStdin --weights sparse --model-file %s/models/ner/%s'
+        % (memory, BASE_DIR, BASE_DIR, BASE_DIR, ner_model),
+        shell=True,
+        close_fds=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE)
+
 
 def GetLLda():
-    return subprocess.Popen('%s/hbc/models/LabeledLDA_infer_stdin.out %s/hbc/data/combined.docs.hbc %s/hbc/data/combined.z.hbc 100 100' % (BASE_DIR, BASE_DIR, BASE_DIR),
-                           shell=True,
-                           close_fds=True,
-                           stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE)
+    return subprocess.Popen(
+        '%s/hbc/models/LabeledLDA_infer_stdin.out %s/hbc/data/combined.docs.hbc %s/hbc/data/combined.z.hbc 100 100'
+        % (BASE_DIR, BASE_DIR, BASE_DIR),
+        shell=True,
+        close_fds=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE)
 
 #if platform.architecture() != ('64bit', 'ELF'):
 #    sys.exit("Requires 64 bit Linux")
@@ -54,26 +60,39 @@ def GetLLda():
 start_time = time.time()
 
 parser = argparse.ArgumentParser()
-parser.add_argument("input_file", help="Path to the input file. Each line should have the text.Optionally it can be a tab delimited file.")
-parser.add_argument("--text-pos", "-t",help="Column number (starting from 0) of the column containing text", type=int, default=0)
-parser.add_argument("--output-file", "-o", help="Path to the output file", default=None)
+parser.add_argument(
+    "input_file",
+    help="Path to the input file. Each line should have the text.Optionally it can be a tab delimited file.")
+parser.add_argument(
+    "--text-pos",
+    "-t",
+    help="Column number (starting from 0) of the column containing text",
+    type=int,
+    default=0)
+parser.add_argument("--output-file",
+                    "-o",
+                    help="Path to the output file",
+                    default=None)
 parser.add_argument("--chunk", "-k", action="store_true", default=False)
 parser.add_argument("--pos", "-p", action="store_true", default=False)
 parser.add_argument("--event", "-e", action="store_true", default=False)
 parser.add_argument("--classify", "-c", action="store_true", default=False)
-parser.add_argument("--mallet-memory", "-m", default="256m", help="Memory allocated for Mallet instance")
+parser.add_argument("--mallet-memory",
+                    "-m",
+                    default="256m",
+                    help="Memory allocated for Mallet instance")
 options = parser.parse_args()
 
-print >> sys.stderr , "Starting with the following configuration\n", "--"*20
-print >> sys.stderr , "Input file: %s" % options.input_file
-print >> sys.stderr , "Text Position: %s" % options.text_pos
-print >> sys.stderr , "Output file: %s" % options.output_file
-print >> sys.stderr , "Chunk: %s" % options.chunk
-print >> sys.stderr , "POS: %s" % options.pos
-print >> sys.stderr , "Event: %s" % options.event
-print >> sys.stderr , "Classify: %s" % options.classify
-print >> sys.stderr , "Mallet Memory: %s" % options.mallet_memory
-print >> sys.stderr , "--"*20
+print >> sys.stderr, "Starting with the following configuration\n", "--" * 20
+print >> sys.stderr, "Input file: %s" % options.input_file
+print >> sys.stderr, "Text Position: %s" % options.text_pos
+print >> sys.stderr, "Output file: %s" % options.output_file
+print >> sys.stderr, "Chunk: %s" % options.chunk
+print >> sys.stderr, "POS: %s" % options.pos
+print >> sys.stderr, "Event: %s" % options.event
+print >> sys.stderr, "Classify: %s" % options.classify
+print >> sys.stderr, "Mallet Memory: %s" % options.mallet_memory
+print >> sys.stderr, "--" * 20
 
 if options.input_file is None or options.input_file == "":
     print >> sys.stderr, "No input file given."
@@ -129,7 +148,8 @@ for i in dictMap.keys():
     dict2index[dictMap[i]] = i
 
 if llda:
-    dictionaries = Dictionaries('%s/data/LabeledLDA_dictionaries3' % (BASE_DIR), dict2index)
+    dictionaries = Dictionaries('%s/data/LabeledLDA_dictionaries3' %
+                                (BASE_DIR), dict2index)
 entityMap = {}
 i = 0
 if llda:
@@ -143,9 +163,11 @@ for line in open('%s/hbc/data/dict-label3' % (BASE_DIR)):
     (dictionary, label) = line.rstrip('\n').split(' ')
     dict2label[dictionary] = label
 
-print >> sys.stderr, "Finished loading all models. Now reading from %s and writing to %s"  % (options.input_file, options.output_file)
+print >> sys.stderr, "Finished loading all models. Now reading from %s and writing to %s" % (
+    options.input_file, options.output_file)
 # WRITE TO STDOUT IF NO FILE IS GIVEN FOR OUTPUT
-out_fp = open(options.output_file, "wb+") if options.output_file is not None else sys.stdout
+out_fp = open(options.output_file,
+              "wb+") if options.output_file is not None else sys.stdout
 with open(options.input_file) as fp:
     nLines = 0
     #row = fp.readline().strip().split("\t")
@@ -157,7 +179,8 @@ with open(options.input_file) as fp:
         tweet = row[options.text_pos]
         line = tweet.encode('utf-8', "ignore")
         if not line:
-            print >> sys.stderr, "Finished reading %s lines from %s"  % (nLines -1, options.input_file)
+            print >> sys.stderr, "Finished reading %s lines from %s" % (
+                nLines - 1, options.input_file)
             break
         #print >> sys.stderr, "Read Line: %s, %s" % (nLines, line),
         words = twokenize.tokenize(line)
@@ -168,8 +191,8 @@ with open(options.input_file) as fp:
 
         if posTagger:
             pos = posTagger.TagSentence(words)
-            #pos = [p.split(':')[0] for p in pos]  # remove weights   
-            pos = [re.sub(r':[^:]*$', '', p) for p in pos]  # remove weights   
+            #pos = [p.split(':')[0] for p in pos]  # remove weights
+            pos = [re.sub(r':[^:]*$', '', p) for p in pos]  # remove weights
         else:
             pos = None
 
@@ -177,25 +200,27 @@ with open(options.input_file) as fp:
         if posTagger and chunkTagger:
             word_pos = zip(words, [p.split(':')[0] for p in pos])
             chunk = chunkTagger.TagSentence(word_pos)
-            chunk = [c.split(':')[0] for c in chunk]  # remove weights      
+            chunk = [c.split(':')[0] for c in chunk]  # remove weights
         else:
             chunk = None
 
         #Event tags
         if posTagger and eventTagger:
-            events = eventTagger.TagSentence(words, [p.split(':')[0] for p in pos])
+            events = eventTagger.TagSentence(words,
+                                             [p.split(':')[0] for p in pos])
             events = [e.split(':')[0] for e in events]
         else:
             events = None
 
         quotes = Features.GetQuotes(words)
         for i in range(len(words)):
-            features = fe.Extract(words, pos, chunk, i, goodCap) + ['DOMAIN=Twitter']
+            features = fe.Extract(words, pos, chunk, i,
+                                  goodCap) + ['DOMAIN=Twitter']
             if quotes[i]:
                 features.append("QUOTED")
             seq_features.append(" ".join(features))
         ner.stdin.write(("\t".join(seq_features) + "\n").encode('utf8'))
-            
+
         for i in range(len(words)):
             tags.append(ner.stdout.readline().rstrip('\n').strip(' '))
 
@@ -204,7 +229,8 @@ with open(options.input_file) as fp:
         #Extract and classify entities
         for i in range(len(features.entities)):
             type = None
-            wids = [str(vocab.GetID(x.lower())) for x in features.features[i] if vocab.HasWord(x.lower())]
+            wids = [str(vocab.GetID(x.lower())) for x in features.features[i]
+                    if vocab.HasWord(x.lower())]
             if llda and len(wids) > 0:
                 entityid = "-1"
                 if entityMap.has_key(features.entityStrings[i].lower()):
@@ -213,9 +239,11 @@ with open(options.input_file) as fp:
 
                 if sum(labels) == 0:
                     labels = [1 for x in labels]
-                llda.stdin.write("\t".join([entityid, " ".join(wids), " ".join([str(x) for x in labels])]) + "\n")
+                llda.stdin.write("\t".join([entityid, " ".join(wids), " ".join(
+                    [str(x) for x in labels])]) + "\n")
                 sample = llda.stdout.readline().rstrip('\n')
-                labels = [dict2label[dictMap[int(x)]] for x in sample[4:len(sample)-8].split(' ')]
+                labels = [dict2label[dictMap[int(x)]]
+                          for x in sample[4:len(sample) - 8].split(' ')]
 
                 count = {}
                 for label in labels:
@@ -230,34 +258,39 @@ with open(options.input_file) as fp:
 
                 if maxL != 'None':
                     tags[features.entities[i][0]] = "B-%s" % (maxL)
-                    for j in range(features.entities[i][0]+1,features.entities[i][1]):
+                    for j in range(features.entities[i][0] + 1,
+                                   features.entities[i][1]):
                         tags[j] = "I-%s" % (maxL)
                 else:
                     tags[features.entities[i][0]] = "O"
-                    for j in range(features.entities[i][0]+1,features.entities[i][1]):
+                    for j in range(features.entities[i][0] + 1,
+                                   features.entities[i][1]):
                         tags[j] = "O"
             else:
                 tags[features.entities[i][0]] = "B-ENTITY"
-                for j in range(features.entities[i][0]+1,features.entities[i][1]):
+                for j in range(features.entities[i][0] + 1,
+                               features.entities[i][1]):
                     tags[j] = "I-ENTITY"
 
         output = ["%s/%s" % (words[x], tags[x]) for x in range(len(words))]
         if pos:
             output = ["%s/%s" % (output[x], pos[x]) for x in range(len(output))]
         if chunk:
-            output = ["%s/%s" % (output[x], chunk[x]) for x in range(len(output))]
+            output = ["%s/%s" % (output[x], chunk[x])
+                      for x in range(len(output))]
         if events:
-            output = ["%s/%s" % (output[x], events[x]) for x in range(len(output))]
+            output = ["%s/%s" % (output[x], events[x])
+                      for x in range(len(output))]
         #sys.stdout.write((" ".join(output) + "\n").encode('utf8'))
         row[options.text_pos] = (" ".join(output))
         print >> out_fp, ("\t".join(row)).encode('utf8')
         #print >> sys.stderr, "\tWrote Line: %s, %s" % (nLines, row[options.text_pos])
 
-    #    if pos:
-    #        sys.stdout.write((" ".join(["%s/%s/%s" % (words[x], tags[x], pos[x]) for x in range(len(words))]) + "\n").encode('utf8'))
-    #    else:
-    #        sys.stdout.write((" ".join(["%s/%s" % (words[x], tags[x]) for x in range(len(words))]) + "\n").encode('utf8'))        
-        
+        #    if pos:
+        #        sys.stdout.write((" ".join(["%s/%s/%s" % (words[x], tags[x], pos[x]) for x in range(len(words))]) + "\n").encode('utf8'))
+        #    else:
+        #        sys.stdout.write((" ".join(["%s/%s" % (words[x], tags[x]) for x in range(len(words))]) + "\n").encode('utf8'))
+
         #sys.stdout.flush()
 
         #seems like there is a memory leak comming from mallet, so just restart it every 1,000 tweets or so
@@ -268,11 +301,11 @@ with open(options.input_file) as fp:
             #if ner.wait() != 0:
             #sys.stderr.write("error!\n")
             #ner.kill()
-            os.kill(ner.pid, SIGTERM)       #Need to do this for python 2.4
+            os.kill(ner.pid, SIGTERM)  #Need to do this for python 2.4
             ner.wait()
             ner = GetNer(ner_model)
-       
 
 end_time = time.time()
 
-print >> sys.stderr, "Average time per tweet = %ss" % (str((end_time-start_time) / nLines))
+print >> sys.stderr, "Average time per tweet = %ss" % (str(
+    (end_time - start_time) / nLines))
