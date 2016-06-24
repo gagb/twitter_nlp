@@ -285,6 +285,8 @@ for i, row in enumerate(csv_reader):
         header = row.keys()
         csv_writer.writerow(header)
     csv_writer.writerow([row[key] for key in header])
+    if nLines%1000==0:
+        print "Tagged %d" % nLines
 
     #seems like there is a memory leak comming from mallet, so just restart it every 1,000 tweets or so
     if nLines % 10000 == 0:
