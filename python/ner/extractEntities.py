@@ -20,12 +20,15 @@ if os.environ.has_key('TWITTER_NLP'):
 sys.path.append('%s/python' % (BASE_DIR))
 sys.path.append('%s/python/ner' % (BASE_DIR))
 sys.path.append('%s/hbc/python' % (BASE_DIR))
+sys.path.append('%s/../' % BASE_DIR)
 
 import Features
 import twokenize
 from LdaFeatures import LdaFeatures
 from Dictionaries import Dictionaries
 from Vocab import Vocab
+from lang2code import preprocess
+from gears.inout import csv_utils
 
 sys.path.append('%s/python/cap' % (BASE_DIR))
 sys.path.append('%s/python' % (BASE_DIR))
@@ -148,8 +151,8 @@ for i in dictMap.keys():
     dict2index[dictMap[i]] = i
 
 if llda:
-    dictionaries = Dictionaries('%s/data/LabeledLDA_dictionaries3' %
-                                (BASE_DIR), dict2index)
+    dictionaries = Dictionaries('%s/data/LabeledLDA_dictionaries3' % (BASE_DIR),
+                                dict2index)
 entityMap = {}
 i = 0
 if llda:
@@ -166,24 +169,13 @@ for line in open('%s/hbc/data/dict-label3' % (BASE_DIR)):
 print >> sys.stderr, "Finished loading all models. Now reading from %s and writing to %s" % (
     options.input_file, options.output_file)
 # WRITE TO STDOUT IF NO FILE IS GIVEN FOR OUTPUT
-out_fp = open(options.output_file,
-              "wb+") if options.output_file is not None else sys.stdout
-with open(options.input_file) as fp:
-    nLines = 0
-    #row = fp.readline().strip().split("\t")
-    #tweet = row[options.text_pos]
-    #line = tweet.encode('utf-8')
-    while line:
-        nLines += 1
-        row = fp.readline().strip().split("\t")
-        tweet = row[options.text_pos]
-        line = tweet.encode('utf-8', "ignore")
-        if not line:
-            print >> sys.stderr, "Finished reading %s lines from %s" % (
-                nLines - 1, options.input_file)
-            break
-        #print >> sys.stderr, "Read Line: %s, %s" % (nLines, line),
-        words = twokenize.tokenize(line)
+csv_reader = csv_utils.UnicodeDictReader(open(options.input_file, 'rb'))
+csv_writer = csv_utils.UnicodeWriter(open(options.output_file, 'wb'))
+header = None
+for i, row in enumerate(csv_reader):
+    nLines = i
+
+    def tag(words):
         seq_features = []
         tags = []
 
@@ -282,28 +274,29 @@ with open(options.input_file) as fp:
             output = ["%s/%s" % (output[x], events[x])
                       for x in range(len(output))]
         #sys.stdout.write((" ".join(output) + "\n").encode('utf8'))
-        row[options.text_pos] = (" ".join(output))
-        print >> out_fp, ("\t".join(row)).encode('utf8')
-        #print >> sys.stderr, "\tWrote Line: %s, %s" % (nLines, row[options.text_pos])
+        assert len(output) == len(words)
+        return output
+    tagged_query = tag(row[preprocess.QUERY_TOKENS_HEADER].split())
+    tagged_description = tag(row[preprocess.QUERY_DESC_TOKENS_HEADER].split())
+    row.update({preprocess.QUERY_TAGGED_HEADER: " ".join(tagged_query),
+                preprocess.QUERY_DESC_TAGGED_HEADER:
+                " ".join(tagged_description)})
+    if not header:
+        header = row.keys()
+        csv_writer.writerow(header)
+    csv_writer.writerow([row[key] for key in header])
 
-        #    if pos:
-        #        sys.stdout.write((" ".join(["%s/%s/%s" % (words[x], tags[x], pos[x]) for x in range(len(words))]) + "\n").encode('utf8'))
-        #    else:
-        #        sys.stdout.write((" ".join(["%s/%s" % (words[x], tags[x]) for x in range(len(words))]) + "\n").encode('utf8'))
-
-        #sys.stdout.flush()
-
-        #seems like there is a memory leak comming from mallet, so just restart it every 1,000 tweets or so
-        if nLines % 10000 == 0:
-            start = time.time()
-            ner.stdin.close()
-            ner.stdout.close()
-            #if ner.wait() != 0:
-            #sys.stderr.write("error!\n")
-            #ner.kill()
-            os.kill(ner.pid, SIGTERM)  #Need to do this for python 2.4
-            ner.wait()
-            ner = GetNer(ner_model)
+    #seems like there is a memory leak comming from mallet, so just restart it every 1,000 tweets or so
+    if nLines % 10000 == 0:
+        start = time.time()
+        ner.stdin.close()
+        ner.stdout.close()
+        #if ner.wait() != 0:
+        #sys.stderr.write("error!\n")
+        #ner.kill()
+        os.kill(ner.pid, SIGTERM)  #Need to do this for python 2.4
+        ner.wait()
+        ner = GetNer(ner_model)
 
 end_time = time.time()
 
